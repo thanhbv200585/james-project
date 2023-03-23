@@ -26,7 +26,7 @@ import org.apache.james.smtpserver.JamesMessageHook;
 import org.apache.mailet.Attribute;
 import org.apache.mailet.AttributeName;
 import org.apache.mailet.AttributeValue;
-import org.apache.mailet.DsnParameters;
+import org.apache.mailet.FUTURERELEASEParameters;
 import org.apache.mailet.Mail;
 import static org.apache.james.smtpserver.futurerelease.FutureReleaseMailParameterHook.FUTURERELEASE_HOLDFOR;
 import static org.apache.james.smtpserver.futurerelease.FutureReleaseMailParameterHook.FUTURERELEASE_HOLDUNTIL;
@@ -37,8 +37,8 @@ import java.util.Optional;
 public class FutureReleaseMessageHook implements JamesMessageHook{
     @Override
     public HookResult onMessage(SMTPSession session, Mail mail) {
-        Optional<DsnParameters.Holdfor> holdfor = session.getAttachment(FUTURERELEASE_HOLDFOR, ProtocolSession.State.Transaction);
-        Optional<DsnParameters.Holduntil> holduntil = session.getAttachment(FUTURERELEASE_HOLDUNTIL, ProtocolSession.State.Transaction);
+        Optional<FUTURERELEASEParameters.Holdfor> holdfor = session.getAttachment(FUTURERELEASE_HOLDFOR, ProtocolSession.State.Transaction);
+        Optional<FUTURERELEASEParameters.Holduntil> holduntil = session.getAttachment(FUTURERELEASE_HOLDUNTIL, ProtocolSession.State.Transaction);
 
 
         mail.setAttribute(new Attribute(AttributeName.of("futurerelease-arrival-date"), AttributeValue.of(ZonedDateTime.now())));
