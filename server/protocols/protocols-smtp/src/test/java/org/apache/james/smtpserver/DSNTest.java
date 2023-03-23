@@ -177,7 +177,7 @@ class DSNTest {
     void tearDown() {
         smtpServer.destroy();
     }
-
+ // check whether ehlo contains DSN Extensions or not
     @Test
     void ehloShouldAdvertiseDsnExtension() throws Exception {
         smtpServer.configure(FileConfigurationProvider.getConfig(
@@ -228,7 +228,8 @@ class DSNTest {
                 .addRcptParameter(new MailAddress("rcpt@localhost"), DsnParameters.RecipientDsnParameters.of(
                     EnumSet.of(SUCCESS, FAILURE, DELAY),
                     new MailAddress("orcpt@localhost")
-                )).build().get());
+                )).build().
+                get());
     }
 
     @Test

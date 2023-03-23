@@ -53,7 +53,8 @@ public class DsnParameters {
     public static final String ORCPT_PARAMETER = "ORCPT";
     public static final String ENVID_PARAMETER = "ENVID";
     public static final String RET_PARAMETER = "RET";
-
+    public static final String HOLDFOR_PARAMETER = "HOLDFOR";
+    public static final String HOLDUNITL_PARAMETER = "HOLDUNITL";
     public static class XText {
         private static final CharMatcher ESCAPE_CHAR = CharMatcher.isNot('+');
         // https://datatracker.ietf.org/doc/html/rfc3461#section-4
@@ -238,6 +239,8 @@ public class DsnParameters {
                 .toString();
         }
     }
+
+
 
     /**
      * NOTIFY controls in which situations a bounce should be emited for a given recipient.
