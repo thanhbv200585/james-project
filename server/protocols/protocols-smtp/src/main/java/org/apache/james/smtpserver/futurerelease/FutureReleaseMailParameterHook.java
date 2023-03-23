@@ -29,7 +29,7 @@ import static org.apache.james.protocols.api.ProtocolSession.State.Transaction;
 import org.apache.james.protocols.smtp.SMTPSession;
 import org.apache.james.protocols.smtp.hook.HookResult;
 import org.apache.james.protocols.smtp.hook.MailParametersHook;
-import org.apache.mailet.DsnParameters;
+import org.apache.mailet.FUTURERELEASEParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,21 +37,21 @@ public class FutureReleaseMailParameterHook implements MailParametersHook {
 
     private static final Logger logger = LoggerFactory.getLogger(FutureReleaseMailParameterHook.class);
 
-    public static final ProtocolSession.AttachmentKey<DsnParameters.Holdfor> FUTURERELEASE_HOLDFOR = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDFOR", DsnParameters.Holdfor.class);
-    public static final ProtocolSession.AttachmentKey<DsnParameters.Holduntil> FUTURERELEASE_HOLDUNTIL = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDUNTIL", DsnParameters.Holduntil.class);
+    public static final ProtocolSession.AttachmentKey<FUTURERELEASEParameters.Holdfor> FUTURERELEASE_HOLDFOR = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDFOR", FUTURERELEASEParameters.Holdfor.class);
+    public static final ProtocolSession.AttachmentKey<FUTURERELEASEParameters.Holduntil> FUTURERELEASE_HOLDUNTIL = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDUNTIL", FUTURERELEASEParameters.Holduntil.class);
     @Override
     public HookResult doMailParameter(SMTPSession session, String paramName, String paramValue) {
         if(paramName.equals(HOLDFOR_PARAMETER)){
             logger.debug("HoldFor parameter is set to {}", paramValue);
             Integer value = Integer.parseInt(paramValue);
-            DsnParameters.Holdfor holdfor = DsnParameters.Holdfor.of(value);
+            FUTURERELEASEParameters.Holdfor holdfor = FUTURERELEASEParameters.Holdfor.of(value);
             session.setAttachment(FUTURERELEASE_HOLDFOR, holdfor, Transaction);
         }else if(paramName.equals(HOLDUNITL_PARAMETER)){
             logger.debug("HoldUntil parameter is set to {}", paramValue);
-            DsnParameters.Holduntil holduntil = DsnParameters.Holduntil.of(paramValue);
+            FUTURERELEASEParameters.Holduntil holduntil = FUTURERELEASEParameters.Holduntil.of(paramValue);
             session.setAttachment(FUTURERELEASE_HOLDUNTIL, holduntil, Transaction);
         }
-        return null;
+        return HookResult.DECLINED;
     }
 
     @Override
