@@ -228,7 +228,8 @@ class DSNTest {
                 .addRcptParameter(new MailAddress("rcpt@localhost"), DsnParameters.RecipientDsnParameters.of(
                     EnumSet.of(SUCCESS, FAILURE, DELAY),
                     new MailAddress("orcpt@localhost")
-                )).build().get());
+                )).build().
+                get());
     }
 
     @Test
