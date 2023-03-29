@@ -19,39 +19,58 @@
 
 package org.apache.james.smtpserver.futurerelease;
 
-import static org.apache.mailet.DsnParameters.HOLDFOR_PARAMETER;
-import static org.apache.mailet.DsnParameters.HOLDUNITL_PARAMETER;
-
 import org.apache.james.protocols.api.ProtocolSession;
 import static org.apache.james.protocols.api.ProtocolSession.State.Transaction;
+import static org.apache.mailet.FutureReleaseParameters.HOLDFOR_PARAMETER;
+import static org.apache.mailet.FutureReleaseParameters.HOLDUNITL_PARAMETER;
+import static org.apache.mailet.FutureReleaseParameters.holdforValue;
 
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 import org.apache.james.protocols.smtp.SMTPSession;
 import org.apache.james.protocols.smtp.hook.HookResult;
 import org.apache.james.protocols.smtp.hook.MailParametersHook;
-import org.apache.mailet.FUTURERELEASEParameters;
+import org.apache.mailet.FutureReleaseParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class FutureReleaseMailParameterHook implements MailParametersHook {
 
-    private static final Logger logger = LoggerFactory.getLogger(FutureReleaseMailParameterHook.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FutureReleaseMailParameterHook.class);
 
-    public static final ProtocolSession.AttachmentKey<FUTURERELEASEParameters.Holdfor> FUTURERELEASE_HOLDFOR = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDFOR", FUTURERELEASEParameters.Holdfor.class);
-    public static final ProtocolSession.AttachmentKey<FUTURERELEASEParameters.Holduntil> FUTURERELEASE_HOLDUNTIL = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDUNTIL", FUTURERELEASEParameters.Holduntil.class);
+    public static final ProtocolSession.AttachmentKey<FutureReleaseParameters.Holdfor> FUTURERELEASE_HOLDFOR = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDFOR", FutureReleaseParameters.Holdfor.class);
+    public static final ProtocolSession.AttachmentKey<FutureReleaseParameters.Holduntil> FUTURERELEASE_HOLDUNTIL = ProtocolSession.AttachmentKey.of("FUTURERELEASE_HOLDUNTIL", FutureReleaseParameters.Holduntil.class);
+
     @Override
     public HookResult doMailParameter(SMTPSession session, String paramName, String paramValue) {
-        if(paramName.equals(HOLDFOR_PARAMETER)){
-            logger.debug("HoldFor parameter is set to {}", paramValue);
-            Integer value = Integer.parseInt(paramValue);
-            FUTURERELEASEParameters.Holdfor holdfor = FUTURERELEASEParameters.Holdfor.of(value);
-            session.setAttachment(FUTURERELEASE_HOLDFOR, holdfor, Transaction);
-        }else if(paramName.equals(HOLDUNITL_PARAMETER)){
-            logger.debug("HoldUntil parameter is set to {}", paramValue);
-            FUTURERELEASEParameters.Holduntil holduntil = FUTURERELEASEParameters.Holduntil.of(paramValue);
-            session.setAttachment(FUTURERELEASE_HOLDUNTIL, holduntil, Transaction);
+        Long interval = new Long(0);
+        if (paramName.equals(HOLDFOR_PARAMETER)) {
+            LOGGER.debug("HoldFor parameter is set to {}", paramValue);
+            interval = Long.parseLong(paramValue);
+        }else if (paramName.equals(HOLDUNITL_PARAMETER)) {
+            LOGGER.debug("Convert holdunitl parameters into holdfor parameters");
+            LocalDateTime now = LocalDateTime.now();
+            if (paramValue.length() == 21) {
+                DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                LocalDateTime dateTime = LocalDateTime.parse(paramValue, dateTimeFormatter);
+                interval =  Duration.between(now, dateTime).toSeconds();
+            }else if (paramValue.length() == 25){
+                LocalDateTime dateTime = ZonedDateTime.parse(paramValue).toLocalDateTime();
+                interval = Duration.between(now, dateTime).toSeconds();
+            }
         }
-        return null;
+        if (interval.longValue() > holdforValue){
+            LOGGER.debug("Invalid holdfor value {}", interval);
+            return HookResult.DECLINED;
+        }
+        FutureReleaseParameters.Holdfor holdfor = FutureReleaseParameters.Holdfor.of(interval);
+        session.setAttachment(FUTURERELEASE_HOLDFOR, holdfor, Transaction);
+        return HookResult.DECLINED;
     }
 
     @Override
