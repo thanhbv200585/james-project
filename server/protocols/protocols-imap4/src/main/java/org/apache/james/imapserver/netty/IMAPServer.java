@@ -19,6 +19,7 @@
 package org.apache.james.imapserver.netty;
 
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +33,7 @@ import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.decode.ImapDecoder;
 import org.apache.james.imap.encode.ImapEncoder;
 import org.apache.james.metrics.api.GaugeRegistry;
+import org.apache.james.model.CrowdsecClientConfiguration;
 import org.apache.james.protocols.api.OidcSASLConfiguration;
 import org.apache.james.protocols.lib.netty.AbstractConfigurableAsyncServer;
 import org.apache.james.protocols.netty.AbstractChannelPipelineFactory;
@@ -145,7 +147,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     private boolean ignoreIDLEUponProcessing;
     private Duration heartbeatInterval;
     private ReactiveThrottler reactiveThrottler;
-
+    private CrowdsecClientConfiguration crowdsecClientConfiguration;
 
     public IMAPServer(ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor, ImapMetrics imapMetrics, GaugeRegistry gaugeRegistry) {
         this.processor = processor;
@@ -180,6 +182,11 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
         ImapConfiguration imapConfiguration = getImapConfiguration(configuration);
         heartbeatInterval = imapConfiguration.idleTimeIntervalAsDuration();
         reactiveThrottler = new ReactiveThrottler(gaugeRegistry, imapConfiguration.getConcurrentRequests(), imapConfiguration.getMaxQueueSize());
+        try {
+            crowdsecClientConfiguration = new CrowdsecClientConfiguration(new URL("http://localhost:8080/v1"),  CrowdsecClientConfiguration.DEFAULT_API_KEY);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
         processor.configure(imapConfiguration);
     }
 
@@ -294,6 +301,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
             .imapMetrics(imapMetrics)
             .heartbeatInterval(heartbeatInterval)
             .ignoreIDLEUponProcessing(ignoreIDLEUponProcessing)
+            .crowdsecClientConfiguration(crowdsecClientConfiguration)
             .build();
     }
 

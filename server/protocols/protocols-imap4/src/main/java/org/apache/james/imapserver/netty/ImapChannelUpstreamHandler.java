@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
+import org.apache.james.CrowdsecImapConnectionCheck;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.ImapSessionState;
@@ -41,6 +42,7 @@ import org.apache.james.imap.main.ResponseEncoder;
 import org.apache.james.imap.message.request.AbstractImapRequest;
 import org.apache.james.imap.message.response.ImmutableStatusResponse;
 import org.apache.james.metrics.api.Metric;
+import org.apache.james.model.CrowdsecClientConfiguration;
 import org.apache.james.protocols.netty.Encryption;
 import org.apache.james.util.MDCBuilder;
 import org.apache.james.util.ReactorUtils;
@@ -79,6 +81,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         private boolean ignoreIDLEUponProcessing;
         private Duration heartbeatInterval;
         private ReactiveThrottler reactiveThrottler;
+        private CrowdsecClientConfiguration crowdsecClientConfiguration;
 
         public ImapChannelUpstreamHandlerBuilder reactiveThrottler(ReactiveThrottler reactiveThrottler) {
             this.reactiveThrottler = reactiveThrottler;
@@ -130,8 +133,13 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
             return this;
         }
 
+        public ImapChannelUpstreamHandlerBuilder crowdsecClientConfiguration(CrowdsecClientConfiguration crowdsecClientConfiguration) {
+            this.crowdsecClientConfiguration = crowdsecClientConfiguration;
+            return this;
+        }
+
         public ImapChannelUpstreamHandler build() {
-            return new ImapChannelUpstreamHandler(hello, processor, encoder, compress, secure, imapMetrics, authenticationConfiguration, ignoreIDLEUponProcessing, (int) heartbeatInterval.toSeconds(), reactiveThrottler);
+            return new ImapChannelUpstreamHandler(hello, processor, encoder, compress, secure, imapMetrics, authenticationConfiguration, ignoreIDLEUponProcessing, (int) heartbeatInterval.toSeconds(), reactiveThrottler, crowdsecClientConfiguration);
         }
     }
 
@@ -150,10 +158,11 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
     private final Metric imapCommandsMetric;
     private final boolean ignoreIDLEUponProcessing;
     private final ReactiveThrottler reactiveThrottler;
+    private final CrowdsecClientConfiguration crowdsecClientConfiguration;
 
     public ImapChannelUpstreamHandler(String hello, ImapProcessor processor, ImapEncoder encoder, boolean compress,
                                       Encryption secure, ImapMetrics imapMetrics, AuthenticationConfiguration authenticationConfiguration,
-                                      boolean ignoreIDLEUponProcessing, int heartbeatIntervalSeconds, ReactiveThrottler reactiveThrottler) {
+                                      boolean ignoreIDLEUponProcessing, int heartbeatIntervalSeconds, ReactiveThrottler reactiveThrottler, CrowdsecClientConfiguration crowdsecClientConfiguration) {
         this.hello = hello;
         this.processor = processor;
         this.encoder = encoder;
@@ -165,6 +174,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         this.ignoreIDLEUponProcessing = ignoreIDLEUponProcessing;
         this.heartbeatHandler = new ImapHeartbeatHandler(heartbeatIntervalSeconds, heartbeatIntervalSeconds, heartbeatIntervalSeconds);
         this.reactiveThrottler = reactiveThrottler;
+        this.crowdsecClientConfiguration = crowdsecClientConfiguration;
     }
 
     @Override
@@ -173,6 +183,8 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         ImapSession imapsession = new NettyImapSession(ctx.channel(), secure, compress, authenticationConfiguration.isSSLRequired(),
             authenticationConfiguration.isPlainAuthEnabled(), sessionId,
             authenticationConfiguration.getOidcSASLConfiguration());
+        CrowdsecImapConnectionCheck connectionCheck = new CrowdsecImapConnectionCheck(crowdsecClientConfiguration);
+        Mono.from(connectionCheck.validate(imapsession.getRemoteAddress())).block();
         ctx.channel().attr(IMAP_SESSION_ATTRIBUTE_KEY).set(imapsession);
         ctx.channel().attr(LINEARALIZER_ATTRIBUTE_KEY).set(new Linearalizer());
         MDCBuilder boundMDC = IMAPMDCContext.boundMDC(ctx)
