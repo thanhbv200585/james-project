@@ -26,7 +26,9 @@ import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 
+import org.apache.james.imap.api.ConnectionCheck;
 import org.apache.james.imap.api.ImapConstants;
 import org.apache.james.imap.api.ImapMessage;
 import org.apache.james.imap.api.ImapSessionState;
@@ -79,6 +81,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         private boolean ignoreIDLEUponProcessing;
         private Duration heartbeatInterval;
         private ReactiveThrottler reactiveThrottler;
+        private Set<ConnectionCheck> connectionChecks;
 
         public ImapChannelUpstreamHandlerBuilder reactiveThrottler(ReactiveThrottler reactiveThrottler) {
             this.reactiveThrottler = reactiveThrottler;
@@ -115,6 +118,11 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
             return this;
         }
 
+        public ImapChannelUpstreamHandlerBuilder connectionChecks(Set<ConnectionCheck> connectionChecks) {
+            this.connectionChecks = connectionChecks;
+            return this;
+        }
+
         public ImapChannelUpstreamHandlerBuilder imapMetrics(ImapMetrics imapMetrics) {
             this.imapMetrics = imapMetrics;
             return this;
@@ -131,7 +139,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         }
 
         public ImapChannelUpstreamHandler build() {
-            return new ImapChannelUpstreamHandler(hello, processor, encoder, compress, secure, imapMetrics, authenticationConfiguration, ignoreIDLEUponProcessing, (int) heartbeatInterval.toSeconds(), reactiveThrottler);
+            return new ImapChannelUpstreamHandler(hello, processor, encoder, compress, secure, imapMetrics, authenticationConfiguration, ignoreIDLEUponProcessing, (int) heartbeatInterval.toSeconds(), reactiveThrottler, connectionChecks);
         }
     }
 
@@ -150,10 +158,12 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
     private final Metric imapCommandsMetric;
     private final boolean ignoreIDLEUponProcessing;
     private final ReactiveThrottler reactiveThrottler;
+    private final Set<ConnectionCheck> connectionChecks;
 
     public ImapChannelUpstreamHandler(String hello, ImapProcessor processor, ImapEncoder encoder, boolean compress,
                                       Encryption secure, ImapMetrics imapMetrics, AuthenticationConfiguration authenticationConfiguration,
-                                      boolean ignoreIDLEUponProcessing, int heartbeatIntervalSeconds, ReactiveThrottler reactiveThrottler) {
+                                      boolean ignoreIDLEUponProcessing, int heartbeatIntervalSeconds, ReactiveThrottler reactiveThrottler,
+                                      Set<ConnectionCheck> connectionChecks) {
         this.hello = hello;
         this.processor = processor;
         this.encoder = encoder;
@@ -165,6 +175,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         this.ignoreIDLEUponProcessing = ignoreIDLEUponProcessing;
         this.heartbeatHandler = new ImapHeartbeatHandler(heartbeatIntervalSeconds, heartbeatIntervalSeconds, heartbeatIntervalSeconds);
         this.reactiveThrottler = reactiveThrottler;
+        this.connectionChecks = connectionChecks;
     }
 
     @Override
@@ -173,6 +184,9 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         ImapSession imapsession = new NettyImapSession(ctx.channel(), secure, compress, authenticationConfiguration.isSSLRequired(),
             authenticationConfiguration.isPlainAuthEnabled(), sessionId,
             authenticationConfiguration.getOidcSASLConfiguration());
+        connectionChecks.forEach(connectionCheck -> Mono.from(connectionCheck.validate(imapsession.getRemoteAddress())).block());
+        connectionChecks.forEach(connectionCheck -> LOGGER.info("ConnectionCheck: {}", connectionCheck));
+        LOGGER.info("ConnectionCheck {}", connectionChecks);
         ctx.channel().attr(IMAP_SESSION_ATTRIBUTE_KEY).set(imapsession);
         ctx.channel().attr(LINEARALIZER_ATTRIBUTE_KEY).set(new Linearalizer());
         MDCBuilder boundMDC = IMAPMDCContext.boundMDC(ctx)

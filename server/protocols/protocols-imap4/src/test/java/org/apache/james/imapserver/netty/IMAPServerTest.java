@@ -42,6 +42,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -69,6 +70,7 @@ import org.apache.commons.net.imap.AuthenticatingIMAPClient;
 import org.apache.commons.net.imap.IMAPReply;
 import org.apache.commons.net.imap.IMAPSClient;
 import org.apache.james.core.Username;
+import org.apache.james.imap.api.ConnectionCheck;
 import org.apache.james.imap.encode.main.DefaultImapEncoderFactory;
 import org.apache.james.imap.main.DefaultImapDecoderFactory;
 import org.apache.james.imap.processor.base.AbstractProcessor;
@@ -148,6 +150,7 @@ class IMAPServerTest {
         memoryIntegrationResources = inMemoryIntegrationResources;
 
         RecordingMetricFactory metricFactory = new RecordingMetricFactory();
+        Set<ConnectionCheck> connectionChecks = defaultConnectionChecks();
         IMAPServer imapServer = new IMAPServer(
             DefaultImapDecoderFactory.createDecoder(),
             new DefaultImapEncoderFactory().buildImapEncoder(),
@@ -162,7 +165,8 @@ class IMAPServerTest {
                 memoryIntegrationResources.getQuotaRootResolver(),
                 metricFactory),
             new ImapMetrics(metricFactory),
-            new NoopGaugeRegistry());
+            new NoopGaugeRegistry(),
+            connectionChecks);
 
         FileSystemImpl fileSystem = FileSystemImpl.forTestingWithConfigurationFromClasspath();
         imapServer.setFileSystem(fileSystem);
@@ -172,7 +176,6 @@ class IMAPServerTest {
 
         return imapServer;
     }
-
     private IMAPServer createImapServer(HierarchicalConfiguration<ImmutableNode> config) throws Exception {
         authenticator = new FakeAuthenticator();
         authenticator.addUser(USER, USER_PASS);
@@ -195,6 +198,54 @@ class IMAPServerTest {
 
     private IMAPServer createImapServer(String configurationFile) throws Exception {
         return createImapServer(ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream(configurationFile)));
+    }
+
+    private Set<ConnectionCheck> defaultConnectionChecks() {
+        return Set.of(new IpConnectionCheck());
+    }
+
+    @Nested
+    class ConnectionCheckTest {
+
+        IMAPServer imapServer;
+        private final IpConnectionCheck ipConnectionCheck = new IpConnectionCheck();
+        private int port;
+
+        @BeforeEach
+        void beforeEach() throws Exception {
+            HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("imapServer.xml"));
+            imapServer = createImapServer(config);
+            port = imapServer.getListenAddresses().get(0).getPort();
+        }
+
+        @Test
+        void banIpWhenBannedIpConnect() {
+            imapServer.getConnectionChecks().stream()
+                .filter(check -> check instanceof IpConnectionCheck)
+                .map(check -> (IpConnectionCheck) check)
+                .forEach(ipCheck -> ipCheck.setBannedIps(Set.of("127.0.0.1")));
+
+            assertThatThrownBy(() -> testIMAPClient.connect("127.0.0.1", port)
+                .login(USER.asString(), USER_PASS)
+                .append("INBOX", SMALL_MESSAGE));
+        }
+
+        @Test
+        void allowConnectWithUnbannedIp() throws IOException {
+            imapServer.getConnectionChecks().stream()
+                .filter(check -> check instanceof IpConnectionCheck)
+                .map(check -> (IpConnectionCheck) check)
+                .forEach(ipCheck -> ipCheck.setBannedIps(Set.of("127.0.0.2")));
+
+            testIMAPClient.connect("127.0.0.1", port)
+                .login(USER.asString(), USER_PASS)
+                .append("INBOX", SMALL_MESSAGE);
+
+            assertThat(testIMAPClient
+                .select("INBOX")
+                .readFirstMessage())
+                .contains("* 1 FETCH (FLAGS (\\Recent \\Seen) BODY[] {21}\r\nheader: value\r\n\r\nBODY)\r\n");
+        }
     }
 
     @Nested

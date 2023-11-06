@@ -20,6 +20,7 @@ package org.apache.james.imapserver.netty;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -27,6 +28,7 @@ import org.apache.commons.configuration2.HierarchicalConfiguration;
 import org.apache.commons.configuration2.tree.ImmutableNode;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.imap.ImapSuite;
+import org.apache.james.imap.api.ConnectionCheck;
 import org.apache.james.imap.api.process.ImapProcessor;
 import org.apache.james.imap.decode.ImapDecoder;
 import org.apache.james.imap.encode.ImapEncoder;
@@ -43,28 +45,32 @@ public class IMAPServerFactory extends AbstractServerFactory {
     protected final ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, ImapSuite> imapSuiteProvider;
     protected final ImapMetrics imapMetrics;
     protected final GaugeRegistry gaugeRegistry;
+    protected final ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> connectionCheckProvider;
 
     @Inject
     @Deprecated
     public IMAPServerFactory(FileSystem fileSystem, ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor,
-                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry) {
+                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry, ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> connectionCheckProvider) {
         this.fileSystem = fileSystem;
+        this.connectionCheckProvider = connectionCheckProvider;
         this.imapSuiteProvider = any -> new ImapSuite(decoder, encoder, processor);
         this.imapMetrics = new ImapMetrics(metricFactory);
         this.gaugeRegistry = gaugeRegistry;
     }
 
     public IMAPServerFactory(FileSystem fileSystem, ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, ImapSuite> imapSuiteProvider,
-                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry) {
+                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry, ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> connectionCheckProvider) {
         this.fileSystem = fileSystem;
         this.imapSuiteProvider = imapSuiteProvider;
         this.imapMetrics = new ImapMetrics(metricFactory);
         this.gaugeRegistry = gaugeRegistry;
+        this.connectionCheckProvider = connectionCheckProvider;
     }
 
     protected IMAPServer createServer(HierarchicalConfiguration<ImmutableNode> config) {
         ImapSuite imapSuite = imapSuiteProvider.apply(config);
-        return new IMAPServer(imapSuite.getDecoder(), imapSuite.getEncoder(), imapSuite.getProcessor(), imapMetrics, gaugeRegistry);
+        Set<ConnectionCheck> connectionChecks = connectionCheckProvider.apply(config);
+        return new IMAPServer(imapSuite.getDecoder(), imapSuite.getEncoder(), imapSuite.getProcessor(), imapMetrics, gaugeRegistry, connectionChecks);
     }
     
     @Override

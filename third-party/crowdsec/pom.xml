@@ -49,6 +49,11 @@
         </dependency>
         <dependency>
             <groupId>${james.protocols.groupId}</groupId>
+            <artifactId>protocols-imap</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${james.protocols.groupId}</groupId>
             <artifactId>protocols-smtp</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -87,6 +92,7 @@
         <dependency>
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
@@ -124,4 +130,25 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <finalName>apache-james-crowdsec</finalName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
