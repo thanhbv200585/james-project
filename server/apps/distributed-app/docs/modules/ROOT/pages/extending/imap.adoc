@@ -43,4 +43,4 @@ ConnectionCheck can be configured in `imapserver.xml` file:
 <additionalConnectionCheck>org.apache.james.CrowdsecImapConnectionCheck</additionalConnectionCheck>
 ```
 
-An example for configuration is available xref:james-project::../../../../../james-project/third-party/crowdsec/sample-configuration/imapserver.xml [here].
+An example for configuration is available link:https://github.com/apache/james-project/blob/master/third-party/crowdsec/sample-configuration/acquis.yaml[here].
