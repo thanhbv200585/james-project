@@ -45,31 +45,30 @@ public class IMAPServerFactory extends AbstractServerFactory {
     protected final ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, ImapSuite> imapSuiteProvider;
     protected final ImapMetrics imapMetrics;
     protected final GaugeRegistry gaugeRegistry;
-    protected final ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> connectionCheckProvider;
+    protected final Set<ConnectionCheck> connectionChecks;
 
     @Inject
     @Deprecated
     public IMAPServerFactory(FileSystem fileSystem, ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor,
-                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry, ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> connectionCheckProvider) {
+                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry, Set<ConnectionCheck> connectionChecks) {
         this.fileSystem = fileSystem;
-        this.connectionCheckProvider = connectionCheckProvider;
+        this.connectionChecks = connectionChecks;
         this.imapSuiteProvider = any -> new ImapSuite(decoder, encoder, processor);
         this.imapMetrics = new ImapMetrics(metricFactory);
         this.gaugeRegistry = gaugeRegistry;
     }
 
     public IMAPServerFactory(FileSystem fileSystem, ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, ImapSuite> imapSuiteProvider,
-                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry, ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> connectionCheckProvider) {
+                             MetricFactory metricFactory, GaugeRegistry gaugeRegistry,Set<ConnectionCheck> connectionChecks) {
         this.fileSystem = fileSystem;
         this.imapSuiteProvider = imapSuiteProvider;
         this.imapMetrics = new ImapMetrics(metricFactory);
         this.gaugeRegistry = gaugeRegistry;
-        this.connectionCheckProvider = connectionCheckProvider;
+        this.connectionChecks = connectionChecks;
     }
 
     protected IMAPServer createServer(HierarchicalConfiguration<ImmutableNode> config) {
         ImapSuite imapSuite = imapSuiteProvider.apply(config);
-        Set<ConnectionCheck> connectionChecks = connectionCheckProvider.apply(config);
         return new IMAPServer(imapSuite.getDecoder(), imapSuite.getEncoder(), imapSuite.getProcessor(), imapMetrics, gaugeRegistry, connectionChecks);
     }
     

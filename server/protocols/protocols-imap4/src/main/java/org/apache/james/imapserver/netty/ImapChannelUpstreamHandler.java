@@ -185,8 +185,6 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
             authenticationConfiguration.isPlainAuthEnabled(), sessionId,
             authenticationConfiguration.getOidcSASLConfiguration());
         connectionChecks.forEach(connectionCheck -> Mono.from(connectionCheck.validate(imapsession.getRemoteAddress())).block());
-        connectionChecks.forEach(connectionCheck -> LOGGER.info("ConnectionCheck: {}", connectionCheck));
-        LOGGER.info("ConnectionCheck {}", connectionChecks);
         ctx.channel().attr(IMAP_SESSION_ATTRIBUTE_KEY).set(imapsession);
         ctx.channel().attr(LINEARALIZER_ATTRIBUTE_KEY).set(new Linearalizer());
         MDCBuilder boundMDC = IMAPMDCContext.boundMDC(ctx)

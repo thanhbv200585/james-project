@@ -24,16 +24,14 @@ import java.net.InetSocketAddress;
 import javax.inject.Inject;
 
 import org.apache.commons.net.util.SubnetUtils;
+import org.apache.james.exception.CrowdsecException;
 import org.apache.james.imap.api.ConnectionCheck;
 import org.apache.james.model.CrowdsecClientConfiguration;
 import org.apache.james.model.CrowdsecDecision;
 import org.apache.james.model.CrowdsecHttpClient;
 import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class CrowdsecImapConnectionCheck implements ConnectionCheck {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CrowdsecImapConnectionCheck.class);
     private final CrowdsecClientConfiguration crowdsecClientConfiguration;
 
     @Inject
@@ -47,9 +45,7 @@ public class CrowdsecImapConnectionCheck implements ConnectionCheck {
         CrowdsecHttpClient client = new CrowdsecHttpClient(crowdsecClientConfiguration);
         return client.getCrowdsecDecisions()
             .filter(decisions -> decisions.stream().anyMatch(decision -> isBanned(decision, ip)))
-            .map(decision -> {
-                throw new RuntimeException("Ip " + ip + " is not allowed to connect to IMAP server by Crowdsec");
-            });
+            .handle((crowdsecDecisions, synchronousSink) -> synchronousSink.error(new CrowdsecException("Ip " + ip + " is not allowed to connect to IMAP server by Crowdsec")));
     }
 
     private boolean isBanned(CrowdsecDecision decision, String ip) {

@@ -32,6 +32,7 @@ import org.apache.james.RunArguments;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.imap.ImapSuite;
 import org.apache.james.imap.api.ConnectionCheck;
+import org.apache.james.imap.api.ConnectionCheckFactory;
 import org.apache.james.imap.api.display.Localizer;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
 import org.apache.james.imap.api.process.DefaultMailboxTyper;
@@ -71,8 +72,6 @@ import org.apache.james.utils.GuiceProbe;
 import org.apache.james.utils.InitializationOperation;
 import org.apache.james.utils.InitilizationOperationBuilder;
 import org.apache.james.utils.KeystoreCreator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
@@ -87,7 +86,6 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.multibindings.ProvidesIntoSet;
 
 public class IMAPServerModule extends AbstractModule {
-    public static final Logger LOGGER = LoggerFactory.getLogger(IMAPServerModule.class);
 
     private static Stream<Pair<Class, AbstractProcessor>> asPairStream(AbstractProcessor p) {
         return p.acceptableClasses()
@@ -110,6 +108,7 @@ public class IMAPServerModule extends AbstractModule {
 
         Multibinder.newSetBinder(binder(), CertificateReloadable.Factory.class).addBinding().to(IMAPServerFactory.class);
         Multibinder.newSetBinder(binder(), ConnectionCheck.class);
+        Multibinder.newSetBinder(binder(), ConnectionCheckFactory.class);
     }
 
     @Provides
@@ -119,8 +118,8 @@ public class IMAPServerModule extends AbstractModule {
                                            StatusResponseFactory statusResponseFactory,
                                            MetricFactory metricFactory,
                                            GaugeRegistry gaugeRegistry,
-                                           Set<ConnectionCheck> connectionChecks) {
-        return new IMAPServerFactory(fileSystem, imapSuiteLoader(loader, statusResponseFactory), metricFactory, gaugeRegistry, retrieveConnectionChecks(loader));
+                                           ConnectionCheckFactory factory) {
+        return new IMAPServerFactory(fileSystem, imapSuiteLoader(loader, statusResponseFactory), metricFactory, gaugeRegistry, factory.create(loader));
     }
 
     DefaultProcessor provideClassImapProcessors(ImapPackage imapPackage, GuiceGenericLoader loader, StatusResponseFactory statusResponseFactory) {
@@ -168,20 +167,18 @@ public class IMAPServerModule extends AbstractModule {
         return ImapPackage.and(packages);
     }
 
-    private Set<ConnectionCheck> retrieveConnectionChecks(GuiceGenericLoader loader, HierarchicalConfiguration<ImmutableNode> configuration) {
-        String[] connectionChecks = configuration.getStringArray("additionalConnectionCheck");
+    private Function<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> retrieveConnectionChecks(GuiceGenericLoader loader) {
+        return configuration -> {
+            String[] connectionChecks = configuration.getStringArray("additionalConnectionCheck");
 
-        return Optional.ofNullable(connectionChecks)
-            .stream()
-            .flatMap(Arrays::stream)
-            .map(ClassName::new)
-            .map(Throwing.function(loader::instantiate))
-            .map(ConnectionCheck.class::cast)
-            .collect(ImmutableSet.toImmutableSet());
-    }
-
-    private ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> retrieveConnectionChecks(GuiceGenericLoader loader) {
-        return configuration -> retrieveConnectionChecks(loader, configuration);
+            return Optional.ofNullable(connectionChecks)
+                .stream()
+                .flatMap(Arrays::stream)
+                .map(ClassName::new)
+                .map(Throwing.function(loader::instantiate))
+                .map(ConnectionCheck.class::cast)
+                .collect(ImmutableSet.toImmutableSet());
+        };
     }
 
     private ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, ImapSuite> imapSuiteLoader(GuiceGenericLoader loader,

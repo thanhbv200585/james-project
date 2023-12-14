@@ -113,6 +113,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.fge.lambdas.Throwing;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.sun.mail.imap.IMAPFolder;
 
 import ch.qos.logback.classic.Logger;
@@ -201,7 +202,7 @@ class IMAPServerTest {
     }
 
     private Set<ConnectionCheck> defaultConnectionChecks() {
-        return Set.of(new IpConnectionCheck());
+        return ImmutableSet.of(new IpConnectionCheck());
     }
 
     @Nested

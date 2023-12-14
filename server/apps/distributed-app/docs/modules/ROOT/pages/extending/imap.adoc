@@ -28,7 +28,7 @@ See this page for xref:configure/imap.adoc#_extending_imap[more details on confi
 
 James allows defining your own additional connection checks to guarantee that the connecting IP is secured.
 
-An Connection check is a functional interface:
+A custom connection check should implement the following functional interface:
 ```
 @FunctionalInterface
 public interface ConnectionCheck {
@@ -38,9 +38,9 @@ public interface ConnectionCheck {
 
 - `validate` method is used to check the connecting IP is secured.
 
-ConnectionCheck can be configured in `imapserver.xml` file:
+Then the custom defined ConnectionCheck can be added in `imapserver.xml` file:
 ```
 <additionalConnectionCheck>org.apache.james.CrowdsecImapConnectionCheck</additionalConnectionCheck>
 ```
 
-An example for configuration is available link:https://github.com/apache/james-project/blob/master/third-party/crowdsec/sample-configuration/acquis.yaml[here].
+An example for configuration is available link:https://github.com/apache/james-project/blob/master/third-party/crowdsec/sample-configuration/imapserver.xml[here].
