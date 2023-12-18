@@ -184,6 +184,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         ImapSession imapsession = new NettyImapSession(ctx.channel(), secure, compress, authenticationConfiguration.isSSLRequired(),
             authenticationConfiguration.isPlainAuthEnabled(), sessionId,
             authenticationConfiguration.getOidcSASLConfiguration());
+        connectionChecks.forEach(connectionCheck -> LOGGER.info("Connection checks" + connectionCheck));
         connectionChecks.forEach(connectionCheck -> Mono.from(connectionCheck.validate(imapsession.getRemoteAddress())).block());
         ctx.channel().attr(IMAP_SESSION_ATTRIBUTE_KEY).set(imapsession);
         ctx.channel().attr(LINEARALIZER_ATTRIBUTE_KEY).set(new Linearalizer());

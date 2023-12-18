@@ -21,17 +21,15 @@ package org.apache.james.imap.api;
 
 import java.util.Set;
 
-import org.apache.james.utils.GuiceGenericLoader;
-
 @FunctionalInterface
 public interface ConnectionCheckFactory {
-    Set<ConnectionCheck> create(GuiceGenericLoader loader);
+    Set<ConnectionCheck> create(ImapConfiguration imapConfiguration);
 
     public static class Impl implements ConnectionCheckFactory {
 
         @Override
-        public Set<ConnectionCheck> create(GuiceGenericLoader loader) {
-            return null;
+        public Set<ConnectionCheck> create(ImapConfiguration imapConfiguration) {
+            return imapConfiguration.getConnectionChecks();
         }
     }
 }

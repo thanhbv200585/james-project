@@ -166,8 +166,7 @@ class IMAPServerTest {
                 memoryIntegrationResources.getQuotaRootResolver(),
                 metricFactory),
             new ImapMetrics(metricFactory),
-            new NoopGaugeRegistry(),
-            connectionChecks);
+            new NoopGaugeRegistry());
 
         FileSystemImpl fileSystem = FileSystemImpl.forTestingWithConfigurationFromClasspath();
         imapServer.setFileSystem(fileSystem);
