@@ -20,7 +20,6 @@ package org.apache.james.imapserver.netty;
 
 import java.net.MalformedURLException;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -135,6 +134,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     private final ImapDecoder decoder;
     private final ImapMetrics imapMetrics;
     private final GaugeRegistry gaugeRegistry;
+    private final Set<ConnectionCheck> connectionChecks;
 
     private String hello;
     private boolean compress;
@@ -148,14 +148,14 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
     private boolean ignoreIDLEUponProcessing;
     private Duration heartbeatInterval;
     private ReactiveThrottler reactiveThrottler;
-    private Set<ConnectionCheck> connectionChecks;
 
-    public IMAPServer(ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor, ImapMetrics imapMetrics, GaugeRegistry gaugeRegistry) {
+    public IMAPServer(ImapDecoder decoder, ImapEncoder encoder, ImapProcessor processor, ImapMetrics imapMetrics, GaugeRegistry gaugeRegistry, Set<ConnectionCheck> connectionChecks) {
         this.processor = processor;
         this.encoder = encoder;
         this.decoder = decoder;
         this.imapMetrics = imapMetrics;
         this.gaugeRegistry = gaugeRegistry;
+        this.connectionChecks = connectionChecks;
     }
 
     @Override
@@ -207,23 +207,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
                 .concurrentRequests(configuration.getInteger("concurrentRequests", ImapConfiguration.DEFAULT_CONCURRENT_REQUESTS))
                 .isProvisionDefaultMailboxes(configuration.getBoolean("provisionDefaultMailboxes", ImapConfiguration.DEFAULT_PROVISION_DEFAULT_MAILBOXES))
                 .withCustomProperties(configuration.getProperties("customProperties"))
-                .connectionChecks(getConnectionChecks(configuration.getStringArray("connectionChecks")))
                 .build();
-    }
-
-    private static ImmutableSet<ConnectionCheck> getConnectionChecks(String[] connectionChecks) {
-        return Optional.ofNullable(connectionChecks)
-            .stream()
-            .flatMap(Arrays::stream)
-            .map((String className) -> {
-                try {
-                    return Class.forName(className);
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
-            })
-            .map(ConnectionCheck.class::cast)
-            .collect(ImmutableSet.toImmutableSet());
     }
 
     private static TimeUnit getTimeIntervalUnit(String timeIntervalUnit) {

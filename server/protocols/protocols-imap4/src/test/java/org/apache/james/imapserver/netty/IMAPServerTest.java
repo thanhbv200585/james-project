@@ -166,7 +166,7 @@ class IMAPServerTest {
                 memoryIntegrationResources.getQuotaRootResolver(),
                 metricFactory),
             new ImapMetrics(metricFactory),
-            new NoopGaugeRegistry());
+            new NoopGaugeRegistry(), connectionChecks);
 
         FileSystemImpl fileSystem = FileSystemImpl.forTestingWithConfigurationFromClasspath();
         imapServer.setFileSystem(fileSystem);
@@ -213,7 +213,7 @@ class IMAPServerTest {
 
         @BeforeEach
         void beforeEach() throws Exception {
-            HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("imapServer.xml"));
+            HierarchicalConfiguration<ImmutableNode> config = ConfigLoader.getConfig(ClassLoaderUtils.getSystemResourceAsSharedStream("imapServerImapConnectCheck.xml"));
             imapServer = createImapServer(config);
             port = imapServer.getListenAddresses().get(0).getPort();
         }
