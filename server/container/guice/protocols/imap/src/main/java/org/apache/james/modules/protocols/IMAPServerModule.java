@@ -20,7 +20,6 @@ package org.apache.james.modules.protocols;
 
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -108,7 +107,7 @@ public class IMAPServerModule extends AbstractModule {
 
         Multibinder.newSetBinder(binder(), CertificateReloadable.Factory.class).addBinding().to(IMAPServerFactory.class);
         Multibinder.newSetBinder(binder(), ConnectionCheck.class);
-        Multibinder.newSetBinder(binder(), ConnectionCheckFactory.class);
+        bind(ConnectionCheckFactory.class).to(ConnectionCheckFactory.Impl.class);
     }
 
     @Provides
@@ -118,8 +117,8 @@ public class IMAPServerModule extends AbstractModule {
                                            StatusResponseFactory statusResponseFactory,
                                            MetricFactory metricFactory,
                                            GaugeRegistry gaugeRegistry,
-                                           ConnectionCheckFactory factory) {
-        return new IMAPServerFactory(fileSystem, imapSuiteLoader(loader, statusResponseFactory), metricFactory, gaugeRegistry, factory.create(loader));
+                                           ConnectionCheckFactory connectionCheckFactory) {
+        return new IMAPServerFactory(fileSystem, imapSuiteLoader(loader, statusResponseFactory), metricFactory, gaugeRegistry, connectionCheckFactory);
     }
 
     DefaultProcessor provideClassImapProcessors(ImapPackage imapPackage, GuiceGenericLoader loader, StatusResponseFactory statusResponseFactory) {
@@ -167,18 +166,21 @@ public class IMAPServerModule extends AbstractModule {
         return ImapPackage.and(packages);
     }
 
-    private Function<HierarchicalConfiguration<ImmutableNode>, Set<ConnectionCheck>> retrieveConnectionChecks(GuiceGenericLoader loader) {
-        return configuration -> {
-            String[] connectionChecks = configuration.getStringArray("additionalConnectionCheck");
+    private static ImmutableSet<ConnectionCheck> getConnectionChecks(HierarchicalConfiguration<ImmutableNode> configuration) {
+        String[] connectionChecks = configuration.getStringArray("additionalConnectionChecks");
 
-            return Optional.ofNullable(connectionChecks)
-                .stream()
-                .flatMap(Arrays::stream)
-                .map(ClassName::new)
-                .map(Throwing.function(loader::instantiate))
-                .map(ConnectionCheck.class::cast)
-                .collect(ImmutableSet.toImmutableSet());
-        };
+        return Optional.ofNullable(connectionChecks)
+            .stream()
+            .flatMap(Arrays::stream)
+            .map((String className) -> {
+                try {
+                    return Class.forName(className);
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
+            })
+            .map(ConnectionCheck.class::cast)
+            .collect(ImmutableSet.toImmutableSet());
     }
 
     private ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, ImapSuite> imapSuiteLoader(GuiceGenericLoader loader,

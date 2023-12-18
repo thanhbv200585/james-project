@@ -40,7 +40,7 @@ public interface ConnectionCheck {
 
 Then the custom defined ConnectionCheck can be added in `imapserver.xml` file:
 ```
-<additionalConnectionCheck>org.apache.james.CrowdsecImapConnectionCheck</additionalConnectionCheck>
+<additionalConnectionChecks>org.apache.james.CrowdsecImapConnectionCheck</additionalConnectionChecks>
 ```
 
 An example for configuration is available link:https://github.com/apache/james-project/blob/master/third-party/crowdsec/sample-configuration/imapserver.xml[here].

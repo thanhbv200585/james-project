@@ -19,19 +19,38 @@
 
 package org.apache.james.imap.api;
 
+import java.util.Optional;
 import java.util.Set;
 
+import javax.inject.Inject;
+
+import org.apache.james.utils.ClassName;
 import org.apache.james.utils.GuiceGenericLoader;
+
+import com.github.fge.lambdas.Throwing;
+import com.google.common.collect.ImmutableSet;
 
 @FunctionalInterface
 public interface ConnectionCheckFactory {
-    Set<ConnectionCheck> create(GuiceGenericLoader loader);
+    Set<ConnectionCheck> create(ImapConfiguration imapConfiguration);
 
     public static class Impl implements ConnectionCheckFactory {
+        private final GuiceGenericLoader loader;
+
+        @Inject
+        public Impl(GuiceGenericLoader loader) {
+            this.loader = loader;
+        }
 
         @Override
-        public Set<ConnectionCheck> create(GuiceGenericLoader loader) {
-            return null;
+        public Set<ConnectionCheck> create(ImapConfiguration imapConfiguration) {
+            return Optional.ofNullable(imapConfiguration.getConnectionChecks())
+                .orElse(ImmutableSet.of())
+                .stream()
+                .map(ClassName::new)
+                .map(Throwing.function(loader::instantiate))
+                .map(ConnectionCheck.class::cast)
+                .collect(ImmutableSet.toImmutableSet());
         }
     }
 }
