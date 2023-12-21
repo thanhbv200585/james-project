@@ -250,7 +250,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
 
                 if (proxyRequired) {
                     pipeline.addLast(HandlerConstants.PROXY_HANDLER, new HAProxyMessageDecoder());
-                    pipeline.addLast("proxyInformationHandler", new HAProxyMessageHandler());
+                    pipeline.addLast("proxyInformationHandler", new HAProxyMessageHandler(connectionChecks));
                 }
 
                 // Add the text line decoder which limit the max line length,

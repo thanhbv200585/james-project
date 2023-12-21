@@ -43,7 +43,7 @@ public class ConnectionCheckFactoryImpl implements ConnectionCheckFactory {
 
     @Override
     public Set<ConnectionCheck> create(ImapConfiguration imapConfiguration) {
-        return Optional.ofNullable(imapConfiguration.getConnectionChecks())
+        return Optional.ofNullable(imapConfiguration.getAdditionalConnectionChecks())
             .orElse(ImmutableSet.of())
             .stream()
             .map(ClassName::new)

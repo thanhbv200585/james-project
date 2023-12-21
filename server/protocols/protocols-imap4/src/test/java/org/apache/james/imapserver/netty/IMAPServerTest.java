@@ -218,6 +218,11 @@ class IMAPServerTest {
             port = imapServer.getListenAddresses().get(0).getPort();
         }
 
+        @AfterEach
+        void tearDown() {
+            imapServer.destroy();
+        }
+
         @Test
         void banIpWhenBannedIpConnect() {
             imapServer.getConnectionChecks().stream()
@@ -543,6 +548,11 @@ class IMAPServerTest {
 
     @Nested
     class Proxy {
+        private static final String PROXY_IP = "255.255.255.254";
+        private static final String PROXY_DESTINATION = "255.255.255.255";
+        private static final String CLIENT_IP = "127.0.0.1";
+        private static final String RANDOM_IP = "127.0.0.2";
+
         IMAPServer imapServer;
         private SocketChannel clientConnection;
 
@@ -563,10 +573,57 @@ class IMAPServerTest {
             imapServer.destroy();
         }
 
+        private void addBannedIps(String clientIp) {
+            imapServer.getConnectionChecks().stream()
+                .filter(check -> check instanceof IpConnectionCheck)
+                .map(check -> (IpConnectionCheck) check)
+                .forEach(ipCheck -> ipCheck.setBannedIps(Set.of(clientIp)));
+        }
+
         @Test
         void shouldNotFailOnProxyInformation() throws Exception {
             clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
-                "TCP4", "255.255.255.254", "255.255.255.255", 65535, 65535,
+                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
+                USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
+
+            assertThat(new String(readBytes(clientConnection), StandardCharsets.US_ASCII))
+                .startsWith("a0 OK");
+        }
+
+        @Test
+        void shouldDetectAndBanByClientIP() throws IOException {
+            addBannedIps(CLIENT_IP);
+
+            // WHEN connect as CLIENT_IP to PROXY_DESTINATION via PROXY_IP
+            clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
+                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
+                USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
+
+            // THEN LOGIN should be rejected
+            assertThat(new String(readBytes(clientConnection), StandardCharsets.US_ASCII))
+                .doesNotStartWith("a0 OK");
+        }
+
+        @Test
+        void shouldNotBanByProxyIP() throws IOException {
+            // GIVEN somehow PROXY_IP has been banned by mistake
+            addBannedIps(PROXY_IP);
+
+            clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
+                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
+                USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
+
+            // THEN CLIENT_IP still can connect
+            assertThat(new String(readBytes(clientConnection), StandardCharsets.US_ASCII))
+                .startsWith("a0 OK");
+        }
+
+        @Test
+        void clientUsageShouldBeNormalWhenClientIPIsNotBanned() throws IOException {
+            addBannedIps(RANDOM_IP);
+
+            clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
+                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
                 USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
 
             assertThat(new String(readBytes(clientConnection), StandardCharsets.US_ASCII))

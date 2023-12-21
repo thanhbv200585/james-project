@@ -22,7 +22,9 @@ package org.apache.james.imapserver.netty;
 import static org.apache.james.imapserver.netty.ImapChannelUpstreamHandler.MDC_KEY;
 
 import java.net.InetSocketAddress;
+import java.util.Set;
 
+import org.apache.james.imap.api.ConnectionCheck;
 import org.apache.james.imap.api.process.ImapSession;
 import org.apache.james.protocols.api.CommandDetectionSession;
 import org.apache.james.protocols.api.ProxyInformation;
@@ -36,11 +38,18 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol;
 import io.netty.util.AttributeKey;
+import reactor.core.publisher.Mono;
 
 public class HAProxyMessageHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(HAProxyMessageHandler.class);
     private static final AttributeKey<CommandDetectionSession> SESSION_ATTRIBUTE_KEY = AttributeKey.valueOf("ImapSession");
     public static final AttributeKey<ProxyInformation> PROXY_INFO = AttributeKey.valueOf("proxyInfo");
+
+    private final Set<ConnectionCheck> connectionChecks;
+
+    public HAProxyMessageHandler(Set<ConnectionCheck> connectionChecks) {
+        this.connectionChecks = connectionChecks;
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -60,6 +69,7 @@ public class HAProxyMessageHandler extends ChannelInboundHandlerAdapter {
                 // Refresh MDC info to account for proxying
                 MDCBuilder boundMDC = IMAPMDCContext.boundMDC(ctx);
 
+                connectionChecks.forEach(connectionCheck -> Mono.from(connectionCheck.validate((InetSocketAddress) ctx.channel().remoteAddress())).block());
                 if (imapSession != null) {
                     imapSession.setAttribute(MDC_KEY, boundMDC);
                 }
