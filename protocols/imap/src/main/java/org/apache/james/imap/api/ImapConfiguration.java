@@ -62,7 +62,7 @@ public class ImapConfiguration {
         private Optional<Boolean> isCondstoreEnable;
         private Optional<Boolean> provisionDefaultMailboxes;
         private Optional<Properties> customProperties;
-        private ImmutableSet<String> connectionChecks;
+        private ImmutableSet<String> additionalConnectionChecks;
 
         private Builder() {
             this.appendLimit = Optional.empty();
@@ -75,7 +75,7 @@ public class ImapConfiguration {
             this.isCondstoreEnable = Optional.empty();
             this.provisionDefaultMailboxes = Optional.empty();
             this.customProperties = Optional.empty();
-            this.connectionChecks = ImmutableSet.of();
+            this.additionalConnectionChecks = ImmutableSet.of();
         }
 
         public Builder idleTimeInterval(long idleTimeInterval) {
@@ -146,7 +146,7 @@ public class ImapConfiguration {
         }
 
         public Builder connectionChecks(ImmutableSet<String> connectionChecks) {
-            this.connectionChecks = connectionChecks;
+            this.additionalConnectionChecks = connectionChecks;
             return this;
         }
 
@@ -167,7 +167,7 @@ public class ImapConfiguration {
                     isCondstoreEnable.orElse(DEFAULT_CONDSTORE_DISABLE),
                     provisionDefaultMailboxes.orElse(DEFAULT_PROVISION_DEFAULT_MAILBOXES),
                     customProperties.orElseGet(Properties::new),
-                    connectionChecks);
+                additionalConnectionChecks);
         }
     }
 

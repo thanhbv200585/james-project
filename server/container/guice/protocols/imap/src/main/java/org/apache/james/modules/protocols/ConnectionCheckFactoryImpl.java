@@ -17,11 +17,38 @@
  * under the License.                                           *
  ****************************************************************/
 
-package org.apache.james.imap.api;
+package org.apache.james.modules.protocols;
 
+import java.util.Optional;
 import java.util.Set;
 
-@FunctionalInterface
-public interface ConnectionCheckFactory {
-    Set<ConnectionCheck> create(ImapConfiguration imapConfiguration);
+import javax.inject.Inject;
+
+import org.apache.james.imap.api.ConnectionCheck;
+import org.apache.james.imap.api.ConnectionCheckFactory;
+import org.apache.james.imap.api.ImapConfiguration;
+import org.apache.james.utils.ClassName;
+import org.apache.james.utils.GuiceGenericLoader;
+
+import com.github.fge.lambdas.Throwing;
+import com.google.common.collect.ImmutableSet;
+
+public class ConnectionCheckFactoryImpl implements ConnectionCheckFactory {
+    private final GuiceGenericLoader loader;
+
+    @Inject
+    public ConnectionCheckFactoryImpl(GuiceGenericLoader loader) {
+        this.loader = loader;
+    }
+
+    @Override
+    public Set<ConnectionCheck> create(ImapConfiguration imapConfiguration) {
+        return Optional.ofNullable(imapConfiguration.getConnectionChecks())
+            .orElse(ImmutableSet.of())
+            .stream()
+            .map(ClassName::new)
+            .map(Throwing.function(loader::instantiate))
+            .map(ConnectionCheck.class::cast)
+            .collect(ImmutableSet.toImmutableSet());
+    }
 }

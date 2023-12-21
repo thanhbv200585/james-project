@@ -76,7 +76,6 @@ import com.github.fge.lambdas.Throwing;
 import com.github.fge.lambdas.functions.ThrowingFunction;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -107,7 +106,7 @@ public class IMAPServerModule extends AbstractModule {
 
         Multibinder.newSetBinder(binder(), CertificateReloadable.Factory.class).addBinding().to(IMAPServerFactory.class);
         Multibinder.newSetBinder(binder(), ConnectionCheck.class);
-        bind(ConnectionCheckFactory.class).to(ConnectionCheckFactory.Impl.class);
+        bind(ConnectionCheckFactory.class).to(ConnectionCheckFactoryImpl.class);
     }
 
     @Provides
@@ -164,23 +163,6 @@ public class IMAPServerModule extends AbstractModule {
             return ImapPackage.DEFAULT;
         }
         return ImapPackage.and(packages);
-    }
-
-    private static ImmutableSet<ConnectionCheck> getConnectionChecks(HierarchicalConfiguration<ImmutableNode> configuration) {
-        String[] connectionChecks = configuration.getStringArray("additionalConnectionChecks");
-
-        return Optional.ofNullable(connectionChecks)
-            .stream()
-            .flatMap(Arrays::stream)
-            .map((String className) -> {
-                try {
-                    return Class.forName(className);
-                } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
-            })
-            .map(ConnectionCheck.class::cast)
-            .collect(ImmutableSet.toImmutableSet());
     }
 
     private ThrowingFunction<HierarchicalConfiguration<ImmutableNode>, ImapSuite> imapSuiteLoader(GuiceGenericLoader loader,
