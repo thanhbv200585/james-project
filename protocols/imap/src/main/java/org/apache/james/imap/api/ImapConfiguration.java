@@ -145,8 +145,8 @@ public class ImapConfiguration {
             return this;
         }
 
-        public Builder connectionChecks(ImmutableSet<String> connectionChecks) {
-            this.additionalConnectionChecks = connectionChecks;
+        public Builder connectionChecks(ImmutableSet<String> additionalConnectionChecks) {
+            this.additionalConnectionChecks = additionalConnectionChecks;
             return this;
         }
 
@@ -167,7 +167,7 @@ public class ImapConfiguration {
                     isCondstoreEnable.orElse(DEFAULT_CONDSTORE_DISABLE),
                     provisionDefaultMailboxes.orElse(DEFAULT_PROVISION_DEFAULT_MAILBOXES),
                     customProperties.orElseGet(Properties::new),
-                additionalConnectionChecks);
+                    additionalConnectionChecks);
         }
     }
 
@@ -181,9 +181,9 @@ public class ImapConfiguration {
     private final boolean isCondstoreEnable;
     private final boolean provisionDefaultMailboxes;
     private final Properties customProperties;
-    private final ImmutableSet<String> connectionChecks;
+    private final ImmutableSet<String> additionalConnectionChecks;
 
-    private ImapConfiguration(Optional<Long> appendLimit, boolean enableIdle, long idleTimeInterval, int concurrentRequests, int maxQueueSize, TimeUnit idleTimeIntervalUnit, ImmutableSet<Capability> disabledCaps, boolean isCondstoreEnable, boolean provisionDefaultMailboxes, Properties customProperties, ImmutableSet<String> connectionChecks) {
+    private ImapConfiguration(Optional<Long> appendLimit, boolean enableIdle, long idleTimeInterval, int concurrentRequests, int maxQueueSize, TimeUnit idleTimeIntervalUnit, ImmutableSet<Capability> disabledCaps, boolean isCondstoreEnable, boolean provisionDefaultMailboxes, Properties customProperties, ImmutableSet<String> additionalConnectionChecks) {
         this.appendLimit = appendLimit;
         this.enableIdle = enableIdle;
         this.idleTimeInterval = idleTimeInterval;
@@ -194,7 +194,7 @@ public class ImapConfiguration {
         this.isCondstoreEnable = isCondstoreEnable;
         this.provisionDefaultMailboxes = provisionDefaultMailboxes;
         this.customProperties = customProperties;
-        this.connectionChecks = connectionChecks;
+        this.additionalConnectionChecks = additionalConnectionChecks;
     }
 
     public Optional<Long> getAppendLimit() {
@@ -241,8 +241,8 @@ public class ImapConfiguration {
         return customProperties;
     }
 
-    public ImmutableSet<String> getConnectionChecks() {
-        return connectionChecks;
+    public ImmutableSet<String> getAdditionalConnectionChecks() {
+        return additionalConnectionChecks;
     }
 
     @Override
@@ -259,7 +259,7 @@ public class ImapConfiguration {
                 && Objects.equal(that.isProvisionDefaultMailboxes(), provisionDefaultMailboxes)
                 && Objects.equal(that.getCustomProperties(), customProperties)
                 && Objects.equal(that.isCondstoreEnable(), isCondstoreEnable)
-                && Objects.equal(that.getConnectionChecks(), connectionChecks);
+                && Objects.equal(that.getAdditionalConnectionChecks(), additionalConnectionChecks);
         }
         return false;
     }
@@ -267,7 +267,7 @@ public class ImapConfiguration {
     @Override
     public final int hashCode() {
         return Objects.hashCode(enableIdle, idleTimeInterval, idleTimeIntervalUnit, disabledCaps, isCondstoreEnable,
-            concurrentRequests, maxQueueSize, appendLimit, provisionDefaultMailboxes, customProperties, connectionChecks);
+            concurrentRequests, maxQueueSize, appendLimit, provisionDefaultMailboxes, customProperties, additionalConnectionChecks);
     }
 
     @Override
@@ -283,7 +283,7 @@ public class ImapConfiguration {
                 .add("maxQueueSize", maxQueueSize)
                 .add("provisionDefaultMailboxes", provisionDefaultMailboxes)
                 .add("customProperties", customProperties)
-                .add("connectionChecks", connectionChecks)
+                .add("additionalConnectionChecks", additionalConnectionChecks)
                 .toString();
     }
 }
