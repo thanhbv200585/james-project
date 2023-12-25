@@ -60,15 +60,16 @@ public class HAProxyMessageHandler extends ChannelInboundHandlerAdapter {
             ImapSession imapSession = (ImapSession) pipeline.channel().attr(SESSION_ATTRIBUTE_KEY).get();
             if (haproxyMsg.proxiedProtocol().equals(HAProxyProxiedProtocol.TCP4) || haproxyMsg.proxiedProtocol().equals(HAProxyProxiedProtocol.TCP6)) {
 
+                InetSocketAddress sourceIP = new InetSocketAddress(haproxyMsg.sourceAddress(), haproxyMsg.sourcePort());
                 ctx.channel().attr(PROXY_INFO).set(
                     new ProxyInformation(
-                        new InetSocketAddress(haproxyMsg.sourceAddress(), haproxyMsg.sourcePort()),
+                        sourceIP,
                         new InetSocketAddress(haproxyMsg.destinationAddress(), haproxyMsg.destinationPort())));
 
                 LOGGER.info("Connection from {} runs through {} proxy", haproxyMsg.sourceAddress(), haproxyMsg.destinationAddress());
                 // Refresh MDC info to account for proxying
                 MDCBuilder boundMDC = IMAPMDCContext.boundMDC(ctx);
-                Flux.fromIterable(connectionChecks).concatMap(connectionCheck -> connectionCheck.validate(InetSocketAddress.createUnresolved(haproxyMsg.sourceAddress(), haproxyMsg.sourcePort()))).then().block();
+                Flux.fromIterable(connectionChecks).concatMap(connectionCheck -> connectionCheck.validate(sourceIP)).then().block();
 
                 if (imapSession != null) {
                     imapSession.setAttribute(MDC_KEY, boundMDC);
