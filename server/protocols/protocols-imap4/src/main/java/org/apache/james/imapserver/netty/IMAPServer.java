@@ -298,6 +298,7 @@ public class IMAPServer extends AbstractConfigurableAsyncServer implements ImapC
             .imapMetrics(imapMetrics)
             .heartbeatInterval(heartbeatInterval)
             .ignoreIDLEUponProcessing(ignoreIDLEUponProcessing)
+            .proxyRequired(proxyRequired)
             .build();
     }
 

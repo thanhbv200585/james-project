@@ -30,7 +30,6 @@ import org.apache.james.ProtocolConfigurationSanitizer;
 import org.apache.james.RunArguments;
 import org.apache.james.filesystem.api.FileSystem;
 import org.apache.james.imap.ImapSuite;
-import org.apache.james.imap.api.ConnectionCheck;
 import org.apache.james.imap.api.ConnectionCheckFactory;
 import org.apache.james.imap.api.display.Localizer;
 import org.apache.james.imap.api.message.response.StatusResponseFactory;
@@ -105,7 +104,6 @@ public class IMAPServerModule extends AbstractModule {
         Multibinder.newSetBinder(binder(), GuiceProbe.class).addBinding().to(ImapGuiceProbe.class);
 
         Multibinder.newSetBinder(binder(), CertificateReloadable.Factory.class).addBinding().to(IMAPServerFactory.class);
-        Multibinder.newSetBinder(binder(), ConnectionCheck.class);
         bind(ConnectionCheckFactory.class).to(ConnectionCheckFactoryImpl.class);
     }
 

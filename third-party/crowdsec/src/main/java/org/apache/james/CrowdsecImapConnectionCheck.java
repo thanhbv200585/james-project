@@ -41,7 +41,7 @@ public class CrowdsecImapConnectionCheck implements ConnectionCheck {
 
     @Override
     public Publisher<Void> validate(InetSocketAddress remoteAddress) {
-        String ip = remoteAddress.getAddress().getHostAddress();
+        String ip = remoteAddress.getHostName();
         CrowdsecHttpClient client = new CrowdsecHttpClient(crowdsecClientConfiguration);
         return client.getCrowdsecDecisions()
             .filter(decisions -> decisions.stream().anyMatch(decision -> isBanned(decision, ip)))

@@ -27,10 +27,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 
-import org.apache.james.imap.encode.FakeImapSession;
 import org.apache.james.model.CrowdsecClientConfiguration;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -39,13 +37,6 @@ import reactor.core.publisher.Mono;
 public class CrowdsecImapConnectionCheckTest {
     @RegisterExtension
     static CrowdsecExtension crowdsecExtension = new CrowdsecExtension();
-
-    private FakeImapSession fakeImapSession;
-
-    @BeforeEach
-    void setUpBeforeEach() {
-        fakeImapSession = new FakeImapSession();
-    }
 
     @BeforeAll
     static void setUp() throws IOException, InterruptedException {

@@ -38,7 +38,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol;
 import io.netty.util.AttributeKey;
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
 public class HAProxyMessageHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(HAProxyMessageHandler.class);
@@ -68,8 +68,8 @@ public class HAProxyMessageHandler extends ChannelInboundHandlerAdapter {
                 LOGGER.info("Connection from {} runs through {} proxy", haproxyMsg.sourceAddress(), haproxyMsg.destinationAddress());
                 // Refresh MDC info to account for proxying
                 MDCBuilder boundMDC = IMAPMDCContext.boundMDC(ctx);
+                Flux.fromIterable(connectionChecks).concatMap(connectionCheck -> connectionCheck.validate(InetSocketAddress.createUnresolved(haproxyMsg.sourceAddress(), haproxyMsg.sourcePort()))).then().block();
 
-                connectionChecks.forEach(connectionCheck -> Mono.from(connectionCheck.validate((InetSocketAddress) ctx.channel().remoteAddress())).block());
                 if (imapSession != null) {
                     imapSession.setAttribute(MDC_KEY, boundMDC);
                 }

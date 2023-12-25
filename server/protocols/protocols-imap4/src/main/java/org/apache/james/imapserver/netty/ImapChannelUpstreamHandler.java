@@ -60,6 +60,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.Attribute;
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -82,6 +83,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         private Duration heartbeatInterval;
         private ReactiveThrottler reactiveThrottler;
         private Set<ConnectionCheck> connectionChecks;
+        private boolean proxyRequired;
 
         public ImapChannelUpstreamHandlerBuilder reactiveThrottler(ReactiveThrottler reactiveThrottler) {
             this.reactiveThrottler = reactiveThrottler;
@@ -138,8 +140,13 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
             return this;
         }
 
+        public ImapChannelUpstreamHandlerBuilder proxyRequired(boolean proxyRequired) {
+            this.proxyRequired = proxyRequired;
+            return this;
+        }
+
         public ImapChannelUpstreamHandler build() {
-            return new ImapChannelUpstreamHandler(hello, processor, encoder, compress, secure, imapMetrics, authenticationConfiguration, ignoreIDLEUponProcessing, (int) heartbeatInterval.toSeconds(), reactiveThrottler, connectionChecks);
+            return new ImapChannelUpstreamHandler(hello, processor, encoder, compress, secure, imapMetrics, authenticationConfiguration, ignoreIDLEUponProcessing, (int) heartbeatInterval.toSeconds(), reactiveThrottler, connectionChecks, proxyRequired);
         }
     }
 
@@ -159,11 +166,12 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
     private final boolean ignoreIDLEUponProcessing;
     private final ReactiveThrottler reactiveThrottler;
     private final Set<ConnectionCheck> connectionChecks;
+    private final boolean proxyRequired;
 
     public ImapChannelUpstreamHandler(String hello, ImapProcessor processor, ImapEncoder encoder, boolean compress,
                                       Encryption secure, ImapMetrics imapMetrics, AuthenticationConfiguration authenticationConfiguration,
                                       boolean ignoreIDLEUponProcessing, int heartbeatIntervalSeconds, ReactiveThrottler reactiveThrottler,
-                                      Set<ConnectionCheck> connectionChecks) {
+                                      Set<ConnectionCheck> connectionChecks, boolean proxyRequired) {
         this.hello = hello;
         this.processor = processor;
         this.encoder = encoder;
@@ -176,6 +184,7 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         this.heartbeatHandler = new ImapHeartbeatHandler(heartbeatIntervalSeconds, heartbeatIntervalSeconds, heartbeatIntervalSeconds);
         this.reactiveThrottler = reactiveThrottler;
         this.connectionChecks = connectionChecks;
+        this.proxyRequired = proxyRequired;
     }
 
     @Override
@@ -184,11 +193,13 @@ public class ImapChannelUpstreamHandler extends ChannelInboundHandlerAdapter imp
         ImapSession imapsession = new NettyImapSession(ctx.channel(), secure, compress, authenticationConfiguration.isSSLRequired(),
             authenticationConfiguration.isPlainAuthEnabled(), sessionId,
             authenticationConfiguration.getOidcSASLConfiguration());
-        connectionChecks.forEach(connectionCheck -> Mono.from(connectionCheck.validate(imapsession.getRemoteAddress())).block());
         ctx.channel().attr(IMAP_SESSION_ATTRIBUTE_KEY).set(imapsession);
         ctx.channel().attr(LINEARALIZER_ATTRIBUTE_KEY).set(new Linearalizer());
         MDCBuilder boundMDC = IMAPMDCContext.boundMDC(ctx)
             .addToContext(MDCBuilder.SESSION_ID, sessionId.asString());
+        if (!proxyRequired) {
+            Flux.fromIterable(connectionChecks).concatMap(connectionCheck -> connectionCheck.validate(imapsession.getRemoteAddress())).then().block();
+        }
         imapsession.setAttribute(MDC_KEY, boundMDC);
         try (Closeable closeable = mdc(imapsession).build()) {
             InetSocketAddress address = (InetSocketAddress) ctx.channel().remoteAddress();

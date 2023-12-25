@@ -548,9 +548,8 @@ class IMAPServerTest {
 
     @Nested
     class Proxy {
-        private static final String PROXY_IP = "255.255.255.254";
-        private static final String PROXY_DESTINATION = "255.255.255.255";
-        private static final String CLIENT_IP = "127.0.0.1";
+        private static final String CLIENT_IP = "255.255.255.254";
+        private static final String PROXY_IP = "255.255.255.255";
         private static final String RANDOM_IP = "127.0.0.2";
 
         IMAPServer imapServer;
@@ -583,7 +582,7 @@ class IMAPServerTest {
         @Test
         void shouldNotFailOnProxyInformation() throws Exception {
             clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
-                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
+                "TCP4", CLIENT_IP, PROXY_IP, 65535, 65535,
                 USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
 
             assertThat(new String(readBytes(clientConnection), StandardCharsets.US_ASCII))
@@ -596,7 +595,7 @@ class IMAPServerTest {
 
             // WHEN connect as CLIENT_IP to PROXY_DESTINATION via PROXY_IP
             clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
-                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
+                "TCP4", CLIENT_IP, PROXY_IP, 65535, 65535,
                 USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
 
             // THEN LOGIN should be rejected
@@ -610,7 +609,7 @@ class IMAPServerTest {
             addBannedIps(PROXY_IP);
 
             clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
-                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
+                "TCP4", CLIENT_IP, PROXY_IP, 65535, 65535,
                 USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
 
             // THEN CLIENT_IP still can connect
@@ -623,7 +622,7 @@ class IMAPServerTest {
             addBannedIps(RANDOM_IP);
 
             clientConnection.write(ByteBuffer.wrap(String.format("PROXY %s %s %s %d %d\r\na0 LOGIN %s %s\r\n",
-                "TCP4", PROXY_IP, PROXY_DESTINATION, 65535, 65535,
+                "TCP4", CLIENT_IP, PROXY_IP, 65535, 65535,
                 USER.asString(), USER_PASS).getBytes(StandardCharsets.UTF_8)));
 
             assertThat(new String(readBytes(clientConnection), StandardCharsets.US_ASCII))

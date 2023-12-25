@@ -32,7 +32,7 @@ public class IpConnectionCheck implements ConnectionCheck {
 
     @Override
     public Publisher<Void> validate(InetSocketAddress remoteAddress) {
-        String ip = remoteAddress.getAddress().getHostAddress();
+        String ip = remoteAddress.getHostName();
         // check against bannedIps
         if (bannedIps.stream().anyMatch(bannedIp -> bannedIp.equals(ip))) {
             return Mono.error(() -> new RuntimeException("Banned"));
